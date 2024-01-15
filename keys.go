@@ -15,36 +15,21 @@ var (
 )
 
 func AnyKey() error {
-	if !handlerSet.CompareAndSwap(false, true) {
-		return MultipleHandlerErr
-	}
-	if err := keyboard.Open(); err != nil {
-		return errors.Join(AttachErr, err)
-	}
-
-	go func() {
-		defer func() {
-			handlerSet.Store(false)
-			_ = keyboard.Close()
-		}()
-		_, _, _ = keyboard.GetSingleKey()
-		os.Exit(0)
-	}()
-	return nil
+	return key(keyboard.KeyEsc, true, false)
 }
 
 func EscKey() error {
-	return singleKey(keyboard.KeyEsc)
+	return key(keyboard.KeyEsc, false, false)
 }
 func SpaceKey() error {
-	return singleKey(keyboard.KeySpace)
+	return key(keyboard.KeySpace, false, false)
 }
 
 func EnterKey() error {
-	return singleKey(keyboard.KeyEnter)
+	return key(keyboard.KeyEnter, false, false)
 }
 
-func singleKey(key keyboard.Key) error {
+func key(key keyboard.Key, anyKey, block bool) error {
 	if !handlerSet.CompareAndSwap(false, true) {
 		return MultipleHandlerErr
 	}
@@ -60,10 +45,13 @@ func singleKey(key keyboard.Key) error {
 		}()
 		for {
 			_, k, _ := keyboard.GetSingleKey()
-			if k == key {
+			if anyKey || k == key {
 				os.Exit(0)
 			}
 		}
 	}()
+	if block {
+		select {}
+	}
 	return nil
 }

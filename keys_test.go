@@ -21,6 +21,7 @@ func TestMultipleHandlers(t *testing.T) {
 }
 
 func TestMultipleSingleKeyHandlers(t *testing.T) {
+	handlerSet.Store(false) // test hack TODO: fix so this isn't needed
 	err := EnterKey()
 	if err != nil {
 		t.Fatalf("Unexpected error :%v", err)
