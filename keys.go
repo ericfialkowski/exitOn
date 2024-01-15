@@ -2,8 +2,10 @@ package exitOn
 
 import (
 	"errors"
+	"log"
 	"os"
 	"sync/atomic"
+	"time"
 
 	"github.com/eiannone/keyboard"
 )
@@ -12,7 +14,12 @@ var (
 	handlerSet         atomic.Bool
 	MultipleHandlerErr = errors.New("only one key exit handler can be set at a time")
 	AttachErr          = errors.New("error attaching to keyboard for input")
+	running            = true
 )
+
+func Cancel() {
+	running = false
+}
 
 func AnyKey() error {
 	return key(keyboard.KeyEsc, true, false)
@@ -51,7 +58,8 @@ func key(key keyboard.Key, anyKey, wait bool) error {
 		return MultipleHandlerErr
 	}
 
-	if err := keyboard.Open(); err != nil {
+	keysEvents, err := keyboard.GetKeys(10)
+	if err != nil {
 		return errors.Join(AttachErr, err)
 	}
 
@@ -60,16 +68,26 @@ func key(key keyboard.Key, anyKey, wait bool) error {
 			handlerSet.Store(false)
 			_ = keyboard.Close()
 		}()
-		for {
-			_, k, _ := keyboard.GetSingleKey()
-			if anyKey || k == key {
-				os.Exit(0)
+		for running {
+			select {
+			case event := <-keysEvents:
+				if event.Err != nil {
+					log.Printf("Error checking for keys %v", err) //TODO something better
+				}
+				if anyKey || event.Key == key {
+					os.Exit(0)
+				}
+			case <-time.After(time.Second):
+				// noop/break to check the running flag
 			}
+
 		}
 	}()
 
 	if wait {
-		select {}
+		for running {
+			<-time.After(time.Second) // break to check the running flag
+		}
 	}
 	return nil
 }
