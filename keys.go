@@ -74,11 +74,11 @@ func key(key keyboard.Key, anyKey, wait bool) error {
 				if event.Err != nil {
 					log.Printf("Error checking for keys %v", err) //TODO something better
 				}
-				if anyKey || event.Key == key {
+				if anyKey || event.Key == keyboard.KeyCtrlC || event.Key == key {
 					os.Exit(0)
 				}
+			// noop/break to check the running flag
 			case <-time.After(time.Second):
-				// noop/break to check the running flag
 			}
 
 		}
